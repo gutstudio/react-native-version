@@ -4,6 +4,21 @@ const list = require('./util').list;
 const log = require('./util').log;
 const path = require('path');
 const pSettle = require('p-settle');
+const xcode = require('xcode');
+const PlistGenerator = require('plist-generator');
+
+function deepGet(obj, query) {
+	Object
+	.keys(obj)
+	.forEach(function(key) {
+		if (typeof obj[key] === 'object') {
+			deepGet(obj[key], query);
+		} else if (key === query) {
+			console.log(obj[key])
+			return obj[key];
+		}
+	});
+}
 
 /**
  * Custom type definition for Promises
@@ -133,61 +148,84 @@ function version(program, projectPath) {
 		ios = new Promise(function(resolve, reject) {
 			log({text: 'Versioning iOS...'}, programOpts.quiet);
 
-			try {
-				child.execSync('xcode-select --print-path', {
-					stdio: ['ignore', 'ignore', 'pipe']
-				});
-			} catch (err) {
-				reject([
-					{
-						style: 'red',
-						text: err
-					},
-					{
-						style: 'yellow',
-						text: 'Looks like Xcode Command Line Tools aren\'t installed'
-					},
-					{
-						text: '\n  Install:\n\n    $ xcode-select --install\n'
-					}
-				]);
-
-				return;
-			}
-
-			const agvtoolOpts = {
-				cwd: programOpts.ios
-			};
-
-			try {
-				child.execSync('agvtool what-version', agvtoolOpts);
-			} catch (err) {
-				reject([
-					{
-						style: 'red',
-						text: 'No project folder found at ' + programOpts.ios
-					},
-					{
-						style: 'yellow',
-						text: 'Use the "--ios" option to specify the path manually'
-					}
-				]);
-
-				return;
-			}
-
-			if (!programOpts.incrementBuild) {
-				child.spawnSync('agvtool', ['new-marketing-version', appPkg.version], agvtoolOpts);
-			}
-
 			if (programOpts.resetBuild) {
-				child.execSync('agvtool new-version -all 1', agvtoolOpts);
-			} else {
-				child.execSync('agvtool next-version -all', agvtoolOpts);
-			}
+				try {
+					child.execSync('xcode-select --print-path', {
+						stdio: ['ignore', 'ignore', 'pipe']
+					});
+				} catch (err) {
+					reject([
+						{
+							style: 'red',
+							text: err
+						},
+						{
+							style: 'yellow',
+							text: 'Looks like Xcode Command Line Tools aren\'t installed'
+						},
+						{
+							text: '\n  Install:\n\n    $ xcode-select --install\n'
+						}
+					]);
 
-			log({text: 'iOS updated'}, programOpts.quiet);
-			resolve();
+					return;
+				}
+
+				const agvtoolOpts = {
+					cwd: programOpts.ios
+				};
+
+				try {
+					child.execSync('agvtool what-version', agvtoolOpts);
+				} catch (err) {
+					reject([
+						{
+							style: 'red',
+							text: 'No project folder found at ' + programOpts.ios
+						},
+						{
+							style: 'yellow',
+							text: 'Use the "--ios" option to specify the path manually'
+						}
+					]);
+
+					return;
+				}
+
+				if (!programOpts.incrementBuild) {
+					child.spawnSync(
+						'agvtool',
+						['new-marketing-version', appPkg.version],
+						agvtoolOpts
+					);
+				}
+
+				if (programOpts.resetBuild) {
+					child.execSync('agvtool new-version -all 1', agvtoolOpts);
+				} else {
+					child.execSync('agvtool next-version -all', agvtoolOpts);
+				}
+
+				log({text: 'iOS updated'}, programOpts.quiet);
+				resolve();
+			} else {
+				// const proj = xcode.project(path.join(
+				// 	programOpts.ios,
+				// 	'AwesomeProjectEssentials.xcodeproj/project.pbxproj'
+				// ));
+				//
+				// proj.parse(function(err, pbxproj) {
+				// 	deepGet(pbxproj, 'INFOPLIST_FILE')
+				// });
+				const plistObj = new PlistGenerator(fs.readFileSync(path.join(
+					programOpts.ios,
+					'AwesomeProjectEssentials.xcodeproj/project.pbxproj'
+				)), 'utf8');
+
+				console.log(plistObj)
+
+				resolve();
+			}
 		});
 	}
 
@@ -249,7 +287,10 @@ function version(program, projectPath) {
 
 					if (!programOpts.skipTag) {
 						log({text: 'Adjusting Git tag...'}, programOpts.quiet);
-						child.execSync('git tag -f $(git tag --sort=v:refname | tail -1)', gitCmdOpts);
+						child.execSync(
+							'git tag -f $(git tag --sort=v:refname | tail -1)',
+							gitCmdOpts
+						);
 					}
 			}
 		}

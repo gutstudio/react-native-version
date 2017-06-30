@@ -18,6 +18,7 @@ program
 .option('-b, --increment-build', 'Only increment build number.')
 .option('-d, --android [path]', 'Path to your "android/app/build.gradle" file.', defaults.android)
 .option('-i, --ios [path]', 'Path to your "ios/" folder.', defaults.ios)
+.option('-L, --legacy', '...')
 .option('-q, --quiet', 'Be quiet, only report errors.')
 .option('-r, --reset-build', 'Reset build number back to "1" (iOS only). Unlike Android\'s "versionCode", iOS doesn\'t require you to bump the "CFBundleVersion", as long as "CFBundleShortVersionString" changes. To make it consistent across platforms, ' + pkg.name + ' bumps both by default. You can use this option if you prefer to keep the build number value at "1" after every version change. If you then need to push another build under the same version, you can use "-bt ios" to increment.')
 .option('-t, --target <platforms>', 'Only version specified platforms, eg. "--target android,ios".', list)
